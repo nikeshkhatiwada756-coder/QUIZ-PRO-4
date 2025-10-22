@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niktore - Ultimate Offline Learning App</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter (sans-serif) for UI, Lora (serif) for document content -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        // Configuration for Tailwind CSS to extend theme with custom fonts and animations
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Lora', 'serif'],
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        pulse: {
+                            '0%, 100%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.05)' },
+                        }
+                    },
+                    animation: {
+                        fadeIn: 'fadeIn 0.5s ease-out forwards',
+                        pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for the app */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* Removes tap highlight on mobile */
+        }
+
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; /* slate-100 */ }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; /* slate-300 */ border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; /* slate-400 */ }
+        
+        /* Styles for prose content in notes (view as document mode) */
+        .prose-document { 
+            font-family: 'Lora', serif; 
+            line-height: 1.7; 
+            color: #334155; /* slate-700 */
+        }
+        .prose-document h1 { 
+            font-size: 2.5em; /* text-4xl */ 
+            font-weight: 700; /* font-bold */
+            margin-bottom: 0.75em; 
+            padding-bottom: 0.25em;
+            border-bottom: 1px solid #e2e8f0; /* slate-200 */
+            color: #1e293b; /* slate-900 */
+        }
+        .prose-document h2 { 
+            font-size: 1.875em; /* text-3xl */
+            font-weight: 600; /* font-semibold */
+            margin-top: 1.5em; 
+            margin-bottom: 0.75em; 
+            color: #1e293b; /* slate-900 */
+        }
+        .prose-document h3 { 
+            font-size: 1.5em; /* text-2xl */
+            font-weight: 600; /* font-semibold */
+            margin-top: 1.25em; 
+            margin-bottom: 0.5em; 
+            color: #1e293b; /* slate-900 */
+        }
+        .prose-document p { 
+            margin-bottom: 1.25em; 
+            text-align: justify; 
+        }
+        .prose-document ul, .prose-document ol { 
+            margin-bottom: 1.25em; 
+            padding-left: 1.5em; 
+        }
+        .prose-document li { 
+            margin-bottom: 0.5em; 
+        }
+
+        /* Styles for the quiz options */
+        .quiz-option { 
+            transition: all 0.2s ease-in-out; 
+            border-color: #e2e8f0; /* slate-200 */
+            background-color: white;
+            color: #334155; /* slate-700 */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+        }
+        .quiz-option:hover:not(:disabled) {
+            transform: scale(1.01);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            border-color: #60a5fa; /* blue-400 */
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .quiz-option.selected { 
+            transform: scale(1.02); 
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); /* blue-500 shadow */
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .quiz-option.correct { 
+            background-color: #22c55e !important; /* green-500 */
+            color: white !important; 
+            border-color: #16a34a !important; /* green-600 */ 
+            transform: scale(1.02); 
+        }
+        .quiz-option.incorrect { 
+            background-color: #ef4444 !important; /* red-500 */
+            color: white !important; 
+            border-color: #dc2626 !important; /* red-600 */ 
+        }
+        .quiz-option:disabled { 
+            opacity: 0.7; 
+            cursor: not-allowed; 
+        }
+
+        /* Styles for modal backdrop blur */
+        #modal-container.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div id="app-container" class="max-w-4xl mx-auto min-h-screen bg-white shadow-lg flex flex-col">
+        <!-- App Header -->
+        <header class="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0 z-20 shadow-md">
+            <div class="flex items-center gap-3">
+                 <!-- Brain Circuit Icon for Niktore -->
+                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4.5 4.5 0 0 0-4.5 4.5v.43a2 2 0 0 1-1.22 1.85 2 2 0 0 0-1.22 1.85v1.74a2 2 0 0 0 1.22 1.85 2 2 0 0 1 1.22 1.85v.43A4.5 4.5 0 1 0 12 2Z"/><path d="M12 6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg>
+                 <h1 class="text-2xl font-bold tracking-tight">Niktore</h1>
+            </div>
+            <button id="home-button" class="p-2 rounded-full hover:bg-blue-700 active:bg-blue-800 transition-colors" title="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </button>
+        </header>
+
+        <main id="main-content" class="p-4 sm:p-6 flex-grow">
+            <!-- All views will be dynamically rendered here -->
+        </main>
+    </div>
+
+    <!-- Modal for prompts, confirmations, and alerts -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 hidden" style="backdrop-filter: blur(4px);">
+        <div id="modal-content" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-fadeIn">
+            <h3 id="modal-title" class="text-xl font-bold mb-4">Modal Title</h3>
+            <div id="modal-body">
+                <!-- Modal content goes here -->
+            </div>
+            <div id="modal-footer" class="mt-6 flex justify-end space-x-3">
+                <button id="modal-cancel-button" class="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300 transition">Cancel</button>
+                <button id="modal-confirm-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // This script contains the entire logic for the Niktore application.
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- CORE APP STATE & DATABASE SIMULATION ---
+        const app = {
+            currentView: 'home',
+            db: {
+                notes: [],
+                customQuizzes: [],
+                subjects: [], // { id, name, chapters: [{ id, name, questions: [] }] }
+                weakPoints: [], // Array of question objects (question, options, correctAnswer)
+            },
+            quizState: {
+                questions: [], // Current set of questions for the quiz
+                currentQuestionIndex: 0,
+                userAnswers: [],
+                quizType: '', // e.g., 'custom', 'default', 'chapter', 'trending', 'combo', 'nikesh'
+                startTime: null
+            },
+            speech: {
+                synth: window.speechSynthesis,
+                utterance: null,
+                isSpeaking: false
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const mainContent = document.getElementById('main-content');
+        const homeButton = document.getElementById('home-button');
+        const modalContainer = document.getElementById('modal-container');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalFooter = document.getElementById('modal-footer');
+        const modalCancelBtn = document.getElementById('modal-cancel-button');
+        const modalConfirmBtn = document.getElementById('modal-confirm-button');
+
+        // --- UTILITY & HELPER FUNCTIONS ---
+        const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 11)}`;
+        const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
+        const decodeHtml = (html) => {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        };
+
+        // --- DATABASE (localStorage) FUNCTIONS ---
+        const localStorageKey = 'niktoreDB_v4'; // Increment version for new schema
+        const loadDatabase = () => {
+            try {
+                const data = localStorage.getItem(localStorageKey);
+                if (data) {
+                    const parsedData = JSON.parse(data);
+                    // Ensure all parts of the DB are initialized as arrays to prevent errors
+                    app.db.notes = parsedData.notes || [];
+                    app.db.customQuizzes = parsedData.customQuizzes || [];
+                    app.db.subjects = parsedData.subjects || [];
+                    app.db.weakPoints = parsedData.weakPoints || [];
+                } else {
+                    saveDatabase(); // Save initial empty structure if nothing exists
+                }
+            } catch (error) {
+                console.error("Failed to load database from localStorage:", error);
+                showModal({
+                    title: "Data Load Error",
+                    body: "Could not load your saved data. It might be corrupted or inaccessible. Starting with fresh data.",
+                    type: "alert"
+                });
+                // Reset to default empty structure if corrupted
+                app.db = { notes: [], customQuizzes: [], subjects: [], weakPoints: [] };
+                saveDatabase(); // Attempt to save the fresh state
+            }
+        };
+
+        const saveDatabase = () => {
+            try {
+                localStorage.setItem(localStorageKey, JSON.stringify(app.db));
+            } catch (error) {
+                console.error("Failed to save database to localStorage:", error);
+                showModal({
+                    title: "Save Error",
+                    body: "Could not save your data. Your browser's storage might be full or disabled.",
+                    type: "alert"
+                });
+            }
+        };
+
+        // --- MODAL SYSTEM (Robust version) ---
+        // `showModal` provides a flexible way to display alerts, confirmations, or prompts.
+        // It dynamically adjusts buttons and content based on the `type` parameter.
+        const showModal = ({ title, body, type = "confirm", onConfirm, onCancel, confirmText = "Confirm", cancelText = "Cancel", placeholder = "" }) => {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = ''; // Clear previous content
+
+            // Clear any old 'OK' button from previous alerts
+            const oldOkButton = document.getElementById('modal-ok-button');
+            if (oldOkButton) oldOkButton.remove();
+
+            if (type === "prompt") {
+                modalBody.innerHTML = `
+                    <p class="text-slate-600 mb-2">${body}</p>
+                    <input type="text" id="modal-prompt-input" class="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="${placeholder}">
+                `;
+            } else { // confirm or alert
+                modalBody.innerHTML = `<p class="text-slate-600">${body}</p>`;
+            }
+
+            // Configure footer buttons based on type
+            if (type === 'alert') {
+                modalFooter.classList.add('hidden'); // Hide confirm/cancel buttons
+                const okButton = document.createElement('button');
+                okButton.id = 'modal-ok-button';
+                okButton.textContent = "OK";
+                okButton.className = "mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition w-full";
+                okButton.onclick = () => { if (onConfirm) onConfirm(); hideModal(); }; // Alert "OK" acts as a confirm
+                modalBody.appendChild(okButton); // Append to body, not footer for alerts
+            } else {
+                modalFooter.classList.remove('hidden'); // Show confirm/cancel buttons
+                modalConfirmBtn.textContent = confirmText;
+                modalCancelBtn.textContent = cancelText;
+
+                modalConfirmBtn.onclick = () => {
+                    const inputValue = type === "prompt" ? document.getElementById('modal-prompt-input')?.value : null;
+                    if (onConfirm) onConfirm(inputValue);
+                    hideModal();
+                };
+                
+                modalCancelBtn.onclick = () => {
+                    if (onCancel) onCancel();
+                    hideModal();
+                };
+            }
+            
+            modalContainer.classList.remove('hidden');
+            if (type === "prompt") {
+                document.getElementById('modal-prompt-input')?.focus();
+            }
+        };
+
+        const hideModal = () => {
+            modalContainer.classList.add('hidden');
+        };
+        // Close modal if clicking outside the content area
+        modalContainer.addEventListener('click', (e) => {
+            if (e.target === modalContainer) {
+                hideModal();
+            }
+        });
+
+
+        // --- VIEW RENDERING ENGINE ---
+        const navigate = (viewName, params = {}) => {
+            app.currentView = viewName;
+            mainContent.innerHTML = ''; // Clear content for new view
+            window.scrollTo(0, 0); // Scroll to top on navigation
+            
+            // Stop any text-to-speech on navigation
+            if (app.speech.isSpeaking) {
+                app.speech.synth.cancel();
+                app.speech.isSpeaking = false;
+                // Reset button text if it was 'Stop Speaking'
+                const speakBtnText = document.getElementById('speak-btn-text');
+                if (speakBtnText) speakBtnText.textContent = 'Speak this note';
+            }
+
+            const views = {
+                'home': renderHome,
+                'notes': renderNotesList,
+                'editNote': () => renderEditNote(params.noteId),
+                'viewDocument': () => renderDocumentView(params.noteId),
+                'myQuizzes': renderMyQuizzes,
+                'createQuiz': () => renderCreateQuiz(params),
+                'subjects': renderSubjectsList,
+                'chapters': () => renderChaptersList(params.subjectId),
+                'editChapter': () => renderEditChapter(params.subjectId, params.chapterId),
+                'defaultQuizzes': renderDefaultQuizzes,
+                'trendingQuizCategories': renderTrendingQuizCategories,
+                'readNotes': renderReadNotes,
+                'nikeshTutor': renderNikeshTutor,
+                'quizPlayer': renderQuizPlayer,
+                'quizResults': renderQuizResults,
+            };
+
+            const renderFunction = views[viewName];
+            if (renderFunction) {
+                renderFunction();
+            } else {
+                console.error(`View "${viewName}" not found.`);
+                renderHome(); // Fallback to home
+            }
+        };
+        
+        // --- UI COMPONENTS & TEMPLATES ---
+        const createIcon = (name, size = 24, extraClasses = '') => {
+            // SVG paths for various icons (Lucide icons used)
+            const paths = {
+                'home': `<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`,
+                'notebook': `<path d="M2 6h8"/><path d="M2 10h8"/><path d="M2 14h8"/><path d="M2 18h8"/><rect width="20" height="20" x="2" y="2" rx="2"/><path d="M18 2v20"/>`,
+                'plus-circle': `<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/>`,
+                'puzzle': `<path d="M19.43 12.03c.32-.2.57-.44.81-.73l1.19-.04c.85-.03 1.58.6 1.58 1.45 0 .3-.09.59-.26.85l-1.13 1.3c-.23.27-.4.59-.5.94l-.27 1.15c-.11.45-.51.78-.98.78h-.4c-.55 0-1.02-.38-1.17-.91l-.31-1.05c-.14-.49-.4-.93-.78-1.28l-1.33-1.21c-.49-.44-1.18-.5-1.74-.13l-.53.35c-.69.45-1.54.45-2.23 0l-.53-.35c-.56-.37-1.25-.31-1.74.13l-1.33 1.21c-.38.35-.64.79-.78 1.28l-.31 1.05c-.15.53-.62.91-1.17.91h-.4c-.47 0-.87-.33-.98-.78l-.27-1.15c-.1-.35-.27-.67-.5-.94l-1.13-1.3c-.17-.26-.26-.55-.26-.85 0-.85.73-1.48 1.58-1.45l1.19.04c.24.29.49.53.81.73.23.15.5.23.78.23s.55-.08.78-.23l1.34-1.02c.33-.25.77-.25 1.1 0l1.34 1.02c.23.15.5.23.78.23s.55-.08.78-.23l1.34-1.02c.33-.25.77-.25 1.1 0l1.34 1.02c.48.24 1.05.24 1.53 0Z"/>`,
+                'brain-circuit': `<path d="M12 2a4.5 4.5 0 0 0-4.5 4.5v.43a2 2 0 0 1-1.22 1.85 2 2 0 0 0-1.22 1.85v1.74a2 2 0 0 0 1.22 1.85 2 2 0 0 1 1.22 1.85v.43A4.5 4.5 0 1 0 12 2Z"/><path d="M12 6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/>`,
+                'swords': `<path d="M9.43 3.43 3.43 9.43"/><path d="M14.57 3.43 8.57 9.43"/><path d="m3.43 14.57 6 6"/><path d="m14.57 14.57 6-6"/><path d="M18 6 6 18"/><path d="m12 15 3-3"/><path d="M3.43 3.43 2 5l3.57 3.57L7 10l3-3L8.57 5.57 5 2l-1.57 1.43z"/><path d="M14.57 3.43 13 2l3.57 3.57L18 7l3-3L19.57 5.57 16 2l-1.43 1.43z"/><path d="m3.43 14.57 1.57 1.57 3.57-3.57L7 14l-3 3-1.43-1.43 3.57-3.57.01-.01z"/><path d="m14.57 14.57 1.57 1.57 3.57-3.57L18 14l-3 3-1.43-1.43 3.57-3.57z"/>`,
+                'trending-up': `<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>`,
+                'volume-2': `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>`,
+                'file-pen-line': `<path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v5"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10.4 12.6a2 2 0 1 1 3 3L8 21l-4 1 1-4Z"/>`,
+                'trash-2': `<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>`,
+                'target': `<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>`,
+                'file-text': `<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/>`,
+                'sparkles': `<path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9L12 18l1.9-5.8 5.8-1.9-5.8-1.9L12 3z"/><path d="M5 3v4"/><path d="M19 3v4"/><path d="M3 5h4"/><path d="M17 5h4"/><path d="M5 19v-4"/><path d="M19 19v-4"/><path d="M3 17h4"/><path d="M17 17h4"/>`,
+                'edit': `<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/>`,
+                'play': `<polygon points="5 3 19 12 5 21 5 3"/>`,
+            };
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-${name} ${extraClasses}">${paths[name] || ''}</svg>`;
+        };
+
+        const createCard = (title, description, iconHtml, onClick) => {
+            const card = document.createElement('div');
+            card.className = 'bg-white p-4 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border border-slate-200 active:scale-[0.98]';
+            card.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-full flex-shrink-0">
+                        ${iconHtml}
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">${title}</h3>
+                        <p class="text-sm text-slate-500">${description}</p>
+                    </div>
+                </div>
+            `;
+            card.addEventListener('click', onClick);
+            return card;
+        };
+        
+        const createLoader = (text = 'Loading...') => {
+            return `
+                <div class="flex flex-col items-center justify-center p-8 text-center animate-fadeIn">
+                    <svg class="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-slate-500 font-medium">${text}</p>
+                </div>
+            `;
+        };
+
+        const createEmptyState = (message, buttonText, onClick) => {
+            const el = document.createElement('div');
+            el.className = 'text-center py-12 px-6 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 animate-fadeIn';
+            el.innerHTML = `
+                <p class="text-slate-500 mb-4 text-lg">${message}</p>
+                <button id="empty-state-btn" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 hover:bg-blue-700 transition mx-auto">
+                    ${createIcon('plus-circle', 20)} ${buttonText}
+                </button>
+            `;
+            el.querySelector('#empty-state-btn').addEventListener('click', onClick);
+            return el;
+        };
+
+
+        // --- RENDER FUNCTIONS FOR EACH VIEW ---
+
+        const renderHome = () => {
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            `;
+            const container = mainContent.querySelector('.grid');
+            
+            // The "Nikesh" Feature Card - Placed first for prominence
+            const nikeshCard = document.createElement('div');
+            nikeshCard.className = 'md:col-span-2 bg-gradient-to-r from-blue-500 to-indigo-600 p-5 rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer border text-white';
+            nikeshCard.innerHTML = `
+                <div class="flex items-center space-x-4">
+                     <div class="bg-white/20 p-3 rounded-full animate-pulse flex-shrink-0">
+                        ${createIcon('sparkles', 28)}
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Nikesh AI Tutor</h3>
+                        <p class="text-sm opacity-90">Tackle your weak spots! This quiz is built from questions you've previously answered incorrectly.</p>
+                    </div>
+                </div>
+            `;
+            nikeshCard.addEventListener('click', () => navigate('nikeshTutor'));
+            container.appendChild(nikeshCard);
+
+            // Other feature cards
+            container.appendChild(createCard('My Notes', 'Create, edit, and manage your study notes.', createIcon('notebook'), () => navigate('notes')));
+            container.appendChild(createCard('My Quizzes', 'Build and play your own custom quizzes.', createIcon('plus-circle'), () => navigate('myQuizzes')));
+            container.appendChild(createCard('Subjects & Chapters', 'Organize content by subject for structured learning.', createIcon('puzzle'), () => navigate('subjects')));
+            container.appendChild(createCard('Default Quizzes', 'Practice with pre-loaded general knowledge quizzes.', createIcon('brain-circuit'), () => navigate('defaultQuizzes')));
+            container.appendChild(createCard('Combo Quiz', 'A mega-quiz from all your custom content.', createIcon('swords'), () => startComboQuiz()));
+            container.appendChild(createCard('Trending Quizzes', 'Play fresh quizzes from a live public database.', createIcon('trending-up'), () => navigate('trendingQuizCategories')));
+            container.appendChild(createCard('Read & Speak', 'Review your notes with text-to-speech assistance.', createIcon('volume-2'), () => navigate('readNotes')));
+        };
+
+        // --- NIKESH AI TUTOR ---
+        const renderNikeshTutor = () => {
+             mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <button onclick="navigate('home')" class="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-4">&larr; Home</button>
+                    <div class="text-center p-8 bg-slate-50 rounded-lg border border-slate-200">
+                        <div class="inline-block p-4 bg-blue-100 text-blue-600 rounded-full mb-4">
+                           ${createIcon('target', 40)}
+                        </div>
+                        <h2 class="text-3xl font-bold text-slate-900">Nikesh AI Tutor</h2>
+                        <p class="text-slate-600 mt-2 max-w-2xl mx-auto">This special mode creates a personalized quiz from every question you've gotten wrong across all other quizzes. It's the fastest way to turn your weaknesses into strengths.</p>
+                        <p class="font-semibold text-lg my-6">You have <span class="text-blue-600">${app.db.weakPoints.length}</span> unique questions to review.</p>
+                        <button id="start-nikesh-quiz" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-blue-700 transition transform hover:scale-105" ${app.db.weakPoints.length === 0 ? 'disabled' : ''}>
+                            ${createIcon('play', 20, 'inline-block mr-2')} Start Smart Review
+                        </button>
+                        ${app.db.weakPoints.length === 0 ? `<p class="text-sm text-slate-500 mt-3">Answer some quizzes to build your weak points list!</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            if (app.db.weakPoints.length > 0) {
+                document.getElementById('start-nikesh-quiz').addEventListener('click', () => {
+                    startQuiz(app.db.weakPoints, 'nikesh');
+                });
+            }
+        };
+
+        // --- NOTES FEATURE ---
+        const renderNotesList = () => {
+             mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-900">My Notes</h2>
+                        <button id="add-note-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-blue-700 transition">
+                            ${createIcon('plus-circle', 20)} New Note
+                        </button>
+                    </div>
+                    <div id="notes-list" class="space-y-3"></div>
+                </div>
+            `;
+            const list = document.getElementById('notes-list');
+            if (app.db.notes.length === 0) {
+                list.appendChild(createEmptyState(
+                    "You haven't created any notes yet.",
+                    "Create Your First Note",
+                    () => navigate('editNote', { noteId: null })
+                ));
+            } else {
+                app.db.notes.forEach(note => {
+                    const noteEl = document.createElement('div');
+                    noteEl.className = 'bg-white p-4 rounded-lg shadow-md border border-slate-200 flex justify-between items-start';
+                    noteEl.innerHTML = `
+                        <div class="cursor-pointer flex-grow" onclick="navigate('editNote', { noteId: '${note.id}' })">
+                            <h3 class="font-bold text-lg text-slate-800">${note.topic}</h3>
+                            <p class="text-slate-600 text-sm mt-1 line-clamp-2">${note.content}</p>
+                        </div>
+                        <div class="flex flex-col space-y-2 ml-4 flex-shrink-0">
+                             <button data-note-id="${note.id}" class="view-doc-btn bg-purple-100 text-purple-700 p-2 rounded-md hover:bg-purple-200 transition" title="View as Document">${createIcon('file-text', 18)}</button>
+                             <button data-note-id="${note.id}" class="generate-quiz-btn bg-green-100 text-green-700 p-2 rounded-md hover:bg-green-200 transition" title="Create Quiz from Note">${createIcon('plus-circle', 18)}</button>
+                             <button data-note-id="${note.id}" class="edit-note-btn bg-blue-100 text-blue-700 p-2 rounded-md hover:bg-blue-200 transition" title="Edit Note">${createIcon('edit', 18)}</button>
+                             <button data-note-id="${note.id}" data-note-topic="${note.topic}" class="delete-note-btn bg-red-100 text-red-700 p-2 rounded-md hover:bg-red-200 transition" title="Delete Note">${createIcon('trash-2', 18)}</button>
+                        </div>
+                    `;
+                    list.appendChild(noteEl);
+                });
+            }
+
+            document.getElementById('add-note-btn').addEventListener('click', () => navigate('editNote', { noteId: null }));
+            
+            // Event delegation or individual listeners for action buttons
+            list.querySelectorAll('.edit-note-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent parent click from triggering
+                    navigate('editNote', { noteId: e.currentTarget.dataset.noteId });
+                });
+            });
+
+            list.querySelectorAll('.view-doc-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navigate('viewDocument', { noteId: e.currentTarget.dataset.noteId });
+                });
+            });
+
+             list.querySelectorAll('.generate-quiz-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const note = app.db.notes.find(n => n.id === e.currentTarget.dataset.noteId);
+                    navigate('createQuiz', { fromNote: note });
+                });
+            });
+
+            list.querySelectorAll('.delete-note-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const noteId = e.currentTarget.dataset.noteId;
+                    const noteTopic = e.currentTarget.dataset.noteTopic;
+                    showModal({
+                        title: "Delete Note",
+                        body: `Are you sure you want to permanently delete the note "${noteTopic}"? This action cannot be undone.`,
+                        confirmText: "Delete",
+                        onConfirm: () => {
+                             app.db.notes = app.db.notes.filter(n => n.id !== noteId);
+                             saveDatabase();
+                             renderNotesList(); // Re-render
+                        }
+                    });
+                });
+            });
+        };
+
+        const renderEditNote = (noteId) => { 
+            const isNew = !noteId;
+            const note = isNew ? { id: generateId(), topic: '', content: '' } : app.db.notes.find(n => n.id === noteId);
+
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <h2 class="text-2xl font-bold text-slate-900">${isNew ? 'Create New Note' : 'Edit Note'}</h2>
+                    <form id="note-form" class="space-y-4 bg-white p-4 sm:p-6 rounded-lg shadow-md border border-slate-200">
+                        <div>
+                            <label for="note-topic" class="block text-sm font-medium text-slate-700 mb-1">Topic</label>
+                            <input type="text" id="note-topic" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required value="${note.topic}">
+                        </div>
+                        <div>
+                            <label for="note-content" class="block text-sm font-medium text-slate-700 mb-1">Content</label>
+                            <textarea id="note-content" rows="12" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>${note.content}</textarea>
+                        </div>
+                        <div class="flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-slate-200 gap-3">
+                            <button type="button" id="view-doc-btn" class="bg-purple-600 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 hover:bg-purple-700 transition w-full sm:w-auto ${isNew ? 'hidden' : ''}">
+                                ${createIcon('file-text', 18)} View as Document
+                            </button>
+                             <div class="flex space-x-2 w-full sm:w-auto">
+                                <button type="button" id="cancel-note-btn" class="flex-grow bg-slate-200 text-slate-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-slate-300 transition">Cancel</button>
+                                <button type="submit" class="flex-grow bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition">Save Note</button>
+                             </div>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            if(!isNew) {
+                document.getElementById('view-doc-btn').addEventListener('click', () => navigate('viewDocument', {noteId}));
+            }
+            document.getElementById('cancel-note-btn').addEventListener('click', () => navigate('notes'));
+            document.getElementById('note-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const topic = document.getElementById('note-topic').value.trim();
+                const content = document.getElementById('note-content').value.trim();
+                if (topic && content) {
+                    if (isNew) {
+                        app.db.notes.push({ ...note, topic, content });
+                    } else {
+                        // Find the actual object in the array to ensure reactivity/persistence
+                        const existingNoteIndex = app.db.notes.findIndex(n => n.id === noteId);
+                        if (existingNoteIndex !== -1) {
+                            app.db.notes[existingNoteIndex].topic = topic;
+                            app.db.notes[existingNoteIndex].content = content;
+                        } else {
+                            // This shouldn't happen if noteId is valid, but good to have a fallback
+                            app.db.notes.push({ ...note, topic, content });
+                        }
+                    }
+                    saveDatabase();
+                    navigate('notes');
+                } else {
+                     showModal({
+                        title: "Missing Information",
+                        body: "Please provide both a topic and content for your note.",
+                        type: "alert"
+                    });
+                }
+            });
+        };
+
+        // --- PDF-LIKE DOCUMENT VIEW ---
+        const renderDocumentView = (noteId) => {
+            const note = app.db.notes.find(n => n.id === noteId);
+            if (!note) {
+                showModal({ title: "Note Not Found", body: "The note you are trying to view does not exist.", type: "alert" });
+                navigate('notes');
+                return;
+            }
+             mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <button onclick="navigate('editNote', { noteId: '${noteId}' })" class="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-2">&larr; Back to Editor</button>
+                    <div class="bg-white p-8 md:p-12 border border-slate-200 rounded-lg shadow-sm">
+                        <article class="prose-document max-w-none">
+                            <h1>${note.topic}</h1>
+                            <!-- Replace double newlines with paragraphs, single newlines with breaks -->
+                            ${note.content.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')}
+                        </article>
+                    </div>
+                </div>
+            `;
+        };
+
+        // --- CUSTOM QUIZ FEATURE (IMPROVED FLOW) ---
+        const renderMyQuizzes = () => { 
+             mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-900">My Quizzes</h2>
+                        <button id="add-quiz-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-blue-700 transition">
+                            ${createIcon('plus-circle', 20)} New Quiz
+                        </button>
+                    </div>
+                    <div id="quiz-list" class="space-y-3"></div>
+                </div>
+            `;
+            const list = document.getElementById('quiz-list');
+            document.getElementById('add-quiz-btn').addEventListener('click', () => navigate('createQuiz'));
+
+            if (app.db.customQuizzes.length === 0) {
+                 list.appendChild(createEmptyState(
+                    "You haven't created any custom quizzes yet.",
+                    "Create a Quiz",
+                    () => navigate('createQuiz')
+                ));
+            } else {
+                app.db.customQuizzes.forEach(quiz => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-white p-4 rounded-lg shadow-md border border-slate-200 flex justify-between items-center';
+                    el.innerHTML = `
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-lg text-slate-800">${quiz.name}</h3>
+                            <p class="text-slate-500 text-sm">${quiz.questions.length} questions</p>
+                        </div>
+                        <div class="flex space-x-2 ml-4 flex-shrink-0">
+                            <button data-quiz-id="${quiz.id}" class="edit-quiz-btn bg-blue-100 text-blue-700 p-2 rounded-md hover:bg-blue-200 transition" title="Edit Quiz">${createIcon('edit', 18)}</button>
+                            <button data-quiz-id="${quiz.id}" data-quiz-name="${quiz.name}" class="play-quiz-btn bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition" ${quiz.questions.length === 0 ? 'disabled' : ''} title="Play Quiz">
+                                ${createIcon('play', 18, 'inline-block mr-1')} Play
+                            </button>
+                            <button data-quiz-id="${quiz.id}" data-quiz-name="${quiz.name}" class="delete-quiz-btn bg-red-100 text-red-700 p-2 rounded-md hover:bg-red-200 transition" title="Delete Quiz">${createIcon('trash-2', 18)}</button>
+                        </div>
+                    `;
+                    list.appendChild(el);
+                });
+
+                list.querySelectorAll('.edit-quiz-btn').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        navigate('createQuiz', { quizId: e.currentTarget.dataset.quizId });
+                    });
+                });
+
+                list.querySelectorAll('.play-quiz-btn').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        const quiz = app.db.customQuizzes.find(q => q.id === e.currentTarget.dataset.quizId);
+                        if(quiz.questions && quiz.questions.length > 0) {
+                            startQuiz(quiz.questions, 'custom');
+                        } else {
+                             showModal({
+                                title: "Empty Quiz",
+                                body: "This quiz has no questions. Please edit it to add some.",
+                                type: "alert"
+                            });
+                        }
+                    });
+                });
+
+                list.querySelectorAll('.delete-quiz-btn').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        const quizId = e.currentTarget.dataset.quizId;
+                        const quizName = e.currentTarget.dataset.quizName;
+                        showModal({
+                            title: "Delete Quiz",
+                            body: `Are you sure you want to permanently delete the quiz "${quizName}"? This action cannot be undone.`,
+                            confirmText: "Delete",
+                            onConfirm: () => {
+                                app.db.customQuizzes = app.db.customQuizzes.filter(q => q.id !== quizId);
+                                saveDatabase();
+                                renderMyQuizzes();
+                            }
+                        });
+                    });
+                });
+            }
+        };
+
+        const renderCreateQuiz = (params = {}) => { 
+            const quizId = params.quizId;
+            const isNew = !quizId;
+            const fromNote = params.fromNote; // If creating from a note, this will be the note object
+            
+            // If editing an existing quiz or creating a new one
+            let quiz = isNew ? 
+                { id: generateId(), name: fromNote ? `Quiz for: ${fromNote.topic}` : '', questions: [] } : 
+                app.db.customQuizzes.find(q => q.id === quizId);
+            
+            // If creating from a note, and the quiz is new, and the note content is present,
+            // we can auto-generate some questions (optional, but a nice enhancement).
+            // For this implementation, we'll just pre-fill the name and show note content.
+
+            const renderQuestions = () => {
+                const container = document.getElementById('questions-container');
+                container.innerHTML = '';
+                if(quiz.questions.length === 0){
+                    container.innerHTML = `<p class="text-slate-500 text-center py-4">No questions added yet. Use the form above to add questions.</p>`;
+                } else {
+                    quiz.questions.forEach((q, index) => {
+                        const qEl = document.createElement('div');
+                        qEl.className = 'p-3 border border-slate-200 rounded-md bg-slate-50 shadow-sm';
+                        qEl.innerHTML = `
+                            <p class="font-semibold text-slate-800">${index + 1}. ${q.question}</p>
+                            <ul class="list-disc list-inside ml-4 mt-2 text-sm text-slate-600">
+                                ${q.options.map(opt => `<li class="${opt === q.correctAnswer ? 'text-green-600 font-bold' : ''}">${opt}</li>`).join('')}
+                            </ul>
+                            <div class="flex justify-end mt-3">
+                                <button data-q-index="${index}" class="delete-q-btn text-red-500 text-sm hover:underline flex items-center gap-1">${createIcon('trash-2', 16, 'inline-block')} Delete</button>
+                            </div>
+                        `;
+                        container.appendChild(qEl);
+                    });
+
+                    container.querySelectorAll('.delete-q-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const index = parseInt(e.currentTarget.dataset.qIndex, 10);
+                            quiz.questions.splice(index, 1);
+                            renderQuestions(); // Re-render questions list
+                        });
+                    });
+                }
+            };
+            
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">${isNew ? 'Create a New Quiz' : 'Edit Quiz'}</h2>
+                        ${fromNote ? `<p class="text-slate-500 mt-1">Based on your note: "${fromNote.topic}"</p>` : ''}
+                    </div>
+
+                    ${fromNote ? `
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-md shadow-sm">
+                        <h4 class="font-bold text-blue-800">Note Content Preview:</h4>
+                        <p class="text-sm text-slate-700 mt-2 max-h-32 overflow-y-auto">${fromNote.content}</p>
+                    </div>
+                    ` : ''}
+
+                    <div class="space-y-2">
+                        <label for="quiz-name" class="block text-sm font-medium text-slate-700">Quiz Name</label>
+                        <input type="text" id="quiz-name" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required value="${quiz.name}">
+                    </div>
+
+                    <div class="p-4 border border-slate-200 rounded-lg bg-white shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 text-slate-900">Add a New Question</h3>
+                        <form id="add-question-form" class="space-y-3">
+                            <textarea id="question-text" rows="2" placeholder="Enter your question here..." class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required></textarea>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input type="text" id="option1" placeholder="Correct Answer" class="p-2 border border-green-400 rounded-md focus:ring-green-500 focus:border-green-500" required>
+                                <input type="text" id="option2" placeholder="Wrong Answer 1" class="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required>
+                                <input type="text" id="option3" placeholder="Wrong Answer 2" class="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required>
+                                <input type="text" id="option4" placeholder="Wrong Answer 3" class="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required>
+                            </div>
+                            <button type="submit" class="w-full bg-green-500 text-white p-2.5 rounded-md font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
+                                ${createIcon('plus-circle', 20)} Add Question
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-bold text-lg mb-2 text-slate-900">Quiz Questions (${quiz.questions.length})</h3>
+                        <div id="questions-container" class="space-y-3"></div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2 pt-4 border-t border-slate-200">
+                         <button id="cancel-quiz-btn" class="bg-slate-200 text-slate-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-slate-300 transition">Cancel</button>
+                         <button id="save-quiz-btn" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition">Save Quiz</button>
+                    </div>
+                </div>
+            `;
+
+            renderQuestions();
+
+            document.getElementById('add-question-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const questionText = document.getElementById('question-text').value.trim();
+                const options = [
+                    document.getElementById('option1').value.trim(),
+                    document.getElementById('option2').value.trim(),
+                    document.getElementById('option3').value.trim(),
+                    document.getElementById('option4').value.trim()
+                ];
+                if (questionText && options.every(opt => opt)) {
+                    quiz.questions.push({
+                        question: questionText,
+                        options: shuffleArray([...options]), // Shuffle options upon adding
+                        correctAnswer: options[0] // First option is always the correct one
+                    });
+                    e.target.reset();
+                    document.getElementById('question-text').focus();
+                    renderQuestions();
+                } else {
+                    showModal({
+                        title: "Incomplete Question",
+                        body: "Please fill in all fields (question and all four options) to add a question.",
+                        type: "alert"
+                    });
+                }
+            });
+
+            document.getElementById('cancel-quiz-btn').addEventListener('click', () => navigate('myQuizzes'));
+            document.getElementById('save-quiz-btn').addEventListener('click', () => {
+                const quizName = document.getElementById('quiz-name').value.trim();
+                if (quizName && quiz.questions.length > 0) {
+                    quiz.name = quizName;
+                    if (isNew) {
+                        app.db.customQuizzes.push(quiz);
+                    } else {
+                        // Find the existing quiz in the array and update it
+                        const existingQuizIndex = app.db.customQuizzes.findIndex(q => q.id === quizId);
+                        if (existingQuizIndex !== -1) {
+                            app.db.customQuizzes[existingQuizIndex] = { ...quiz }; // Copy all properties
+                        } else {
+                            app.db.customQuizzes.push(quiz); // Fallback
+                        }
+                    }
+                    saveDatabase();
+                    navigate('myQuizzes');
+                } else {
+                    showModal({
+                        title: "Incomplete Quiz",
+                        body: "Please provide a quiz name and add at least one question before saving.",
+                        type: "alert"
+                    });
+                }
+            });
+        };
+
+        // --- SUBJECTS & CHAPTERS ---
+        const renderSubjectsList = () => { 
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                     <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-900">Subjects</h2>
+                        <button id="add-subject-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-blue-700 transition">
+                            ${createIcon('plus-circle', 20)} New Subject
+                        </button>
+                    </div>
+                    <div id="subjects-list" class="space-y-3"></div>
+                </div>
+            `;
+            
+            const list = document.getElementById('subjects-list');
+             document.getElementById('add-subject-btn').addEventListener('click', () => {
+                showModal({
+                    title: "New Subject",
+                    body: "Enter the name for the new subject:",
+                    type: "prompt",
+                    placeholder: "e.g., Biology",
+                    confirmText: "Create",
+                    onConfirm: (subjectName) => {
+                         if (subjectName && subjectName.trim()) {
+                            app.db.subjects.push({ id: generateId(), name: subjectName.trim(), chapters: [] });
+                            saveDatabase();
+                            renderSubjectsList();
+                        } else {
+                            showModal({ title: "Invalid Input", body: "Subject name cannot be empty.", type: "alert" });
+                        }
+                    }
+                });
+            });
+
+            if (app.db.subjects.length === 0) {
+                 list.appendChild(createEmptyState(
+                    "No subjects created yet.",
+                    "Create a Subject",
+                    () => document.getElementById('add-subject-btn').click()
+                ));
+            } else {
+                app.db.subjects.forEach(subject => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-white p-4 rounded-lg shadow-md border border-slate-200 flex justify-between items-center'
+                    el.innerHTML = `
+                        <div class="flex-grow cursor-pointer" onclick="navigate('chapters', {subjectId: '${subject.id}'})">
+                            <h3 class="font-bold text-lg text-slate-800">${subject.name}</h3>
+                            <p class="text-slate-500 text-sm">${subject.chapters.length} chapters, ${subject.chapters.reduce((acc, ch) => acc + ch.questions.length, 0)} questions</p>
+                        </div>
+                        <div class="flex space-x-2 ml-4 flex-shrink-0">
+                            <button data-subject-id="${subject.id}" data-subject-name="${subject.name}" class="play-subject-quiz-btn bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition" ${subject.chapters.reduce((acc, ch) => acc + ch.questions.length, 0) === 0 ? 'disabled' : ''} title="Play All Chapter Quizzes">
+                                ${createIcon('play', 18, 'inline-block mr-1')} Play All
+                            </button>
+                            <button data-subject-id="${subject.id}" data-subject-name="${subject.name}" class="delete-subject-btn bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition" title="Delete Subject">${createIcon('trash-2', 18)}</button>
+                        </div>
+                    `;
+                    el.querySelector('.delete-subject-btn').addEventListener('click', (e) => {
+                         e.stopPropagation();
+                         showModal({
+                             title: "Delete Subject",
+                             body: `Are you sure you want to delete the subject "${e.currentTarget.dataset.subjectName}" and all its chapters? This action cannot be undone.`,
+                             confirmText: "Delete",
+                             onConfirm: () => {
+                                 app.db.subjects = app.db.subjects.filter(s => s.id !== subject.id);
+                                 saveDatabase();
+                                 renderSubjectsList();
+                             }
+                         });
+                    });
+                    el.querySelector('.play-subject-quiz-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const subjectQuestions = subject.chapters.flatMap(ch => ch.questions);
+                        if (subjectQuestions.length > 0) {
+                            startQuiz(subjectQuestions, 'subject');
+                        } else {
+                            showModal({ title: "No Questions", body: "This subject has no questions across its chapters.", type: "alert" });
+                        }
+                    });
+                    list.appendChild(el);
+                });
+            }
+        };
+
+        const renderChaptersList = (subjectId) => { 
+            const subject = app.db.subjects.find(s => s.id === subjectId);
+            if (!subject) { navigate('subjects'); return; }
+
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                     <div class="flex justify-between items-center">
+                        <div>
+                            <button onclick="navigate('subjects')" class="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-1">&larr; Back to Subjects</button>
+                            <h2 class="text-2xl font-bold text-slate-900">${subject.name} Chapters</h2>
+                        </div>
+                        <button id="add-chapter-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-blue-700 transition">
+                            ${createIcon('plus-circle', 20)} New Chapter
+                        </button>
+                    </div>
+                    <div id="chapters-list" class="space-y-3"></div>
+                </div>
+            `;
+            const list = document.getElementById('chapters-list');
+            document.getElementById('add-chapter-btn').addEventListener('click', () => {
+                showModal({
+                    title: "New Chapter",
+                    body: "Enter the name for the new chapter:",
+                    type: "prompt",
+                    placeholder: "e.g., Cell Division",
+                    confirmText: "Create",
+                    onConfirm: (chapterName) => {
+                         if (chapterName && chapterName.trim()) {
+                            subject.chapters.push({ id: generateId(), name: chapterName.trim(), questions: [] });
+                            saveDatabase();
+                            renderChaptersList(subjectId);
+                        } else {
+                            showModal({ title: "Invalid Input", body: "Chapter name cannot be empty.", type: "alert" });
+                        }
+                    }
+                });
+            });
+
+            if (subject.chapters.length === 0) {
+                 list.appendChild(createEmptyState(
+                    `No chapters created yet for "${subject.name}".`,
+                    "Create a Chapter",
+                    () => document.getElementById('add-chapter-btn').click()
+                ));
+            } else {
+                subject.chapters.forEach(chapter => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-white p-4 rounded-lg shadow-md border border-slate-200 flex justify-between items-center'
+                    el.innerHTML = `
+                         <div class="flex-grow cursor-pointer" onclick="navigate('editChapter', {subjectId: '${subjectId}', chapterId: '${chapter.id}'})">
+                            <h3 class="font-bold text-lg text-slate-800">${chapter.name}</h3>
+                            <p class="text-slate-500 text-sm">${chapter.questions.length} questions</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0 ml-4">
+                           <button data-chapter-id="${chapter.id}" class="play-chapter-quiz-btn bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition" ${chapter.questions.length === 0 ? 'disabled' : ''} title="Play Quiz">
+                                ${createIcon('play', 18, 'inline-block mr-1')} Play
+                           </button>
+                           <button data-chapter-id="${chapter.id}" data-chapter-name="${chapter.name}" class="delete-chapter-btn bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition" title="Delete Chapter">${createIcon('trash-2', 18)}</button>
+                        </div>
+                    `;
+                    el.querySelector('.delete-chapter-btn').addEventListener('click', (e) => {
+                         e.stopPropagation();
+                         showModal({
+                             title: "Delete Chapter",
+                             body: `Are you sure you want to delete the chapter "${e.currentTarget.dataset.chapterName}"? This will also delete all its questions.`,
+                             confirmText: "Delete",
+                             onConfirm: () => {
+                                 subject.chapters = subject.chapters.filter(c => c.id !== chapter.id);
+                                 saveDatabase();
+                                 renderChaptersList(subjectId);
+                             }
+                         });
+                    });
+                     el.querySelector('.play-chapter-quiz-btn').addEventListener('click', (e) => {
+                         e.stopPropagation();
+                         const chapterToPlay = subject.chapters.find(c => c.id === chapter.id);
+                         startQuiz(chapterToPlay.questions, 'chapter');
+                    });
+                    list.appendChild(el);
+                });
+            }
+        };
+
+        const renderEditChapter = (subjectId, chapterId) => { 
+            const subject = app.db.subjects.find(s => s.id === subjectId);
+            const chapter = subject?.chapters.find(c => c.id === chapterId);
+            if (!subject || !chapter) { navigate('subjects'); return; }
+
+            const renderChapterQuestions = () => { 
+                const container = document.getElementById('questions-container');
+                container.innerHTML = '';
+                if(chapter.questions.length === 0){
+                    container.innerHTML = `<p class="text-slate-500 text-center py-4">No questions added yet. Use the form above to add questions.</p>`;
+                } else {
+                    chapter.questions.forEach((q, index) => {
+                        const qEl = document.createElement('div');
+                        qEl.className = 'p-3 border border-slate-200 rounded-md bg-slate-50 shadow-sm';
+                        qEl.innerHTML = `
+                            <p class="font-semibold text-slate-800">${index + 1}. ${q.question}</p>
+                            <ul class="list-disc list-inside ml-4 mt-2 text-sm text-slate-600">
+                                ${q.options.map(opt => `<li class="${opt === q.correctAnswer ? 'text-green-600 font-bold' : ''}">${opt}</li>`).join('')}
+                            </ul>
+                            <div class="flex justify-end mt-3">
+                                <button data-q-index="${index}" class="delete-q-btn text-red-500 text-sm hover:underline flex items-center gap-1">${createIcon('trash-2', 16, 'inline-block')} Delete</button>
+                            </div>
+                        `;
+                        container.appendChild(qEl);
+                    });
+                    container.querySelectorAll('.delete-q-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                        chapter.questions.splice(parseInt(e.currentTarget.dataset.qIndex, 10), 1);
+                        renderChapterQuestions(); // Re-render questions list
+                    }));
+                }
+            }
+
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-6">
+                    <div>
+                        <button onclick="navigate('chapters', { subjectId: '${subjectId}' })" class="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-1">&larr; Back to Chapters</button>
+                        <h2 class="text-2xl font-bold text-slate-900">Editing: ${chapter.name}</h2>
+                        <p class="text-slate-500">Add or remove questions for this chapter.</p>
+                    </div>
+                     <div class="p-4 border border-slate-200 rounded-lg bg-white shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 text-slate-900">Add a New Question</h3>
+                        <form id="add-question-form" class="space-y-3">
+                            <textarea id="question-text" rows="2" placeholder="Enter your question here..." class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required></textarea>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input type="text" id="option1" placeholder="Correct Answer" class="p-2 border border-green-400 rounded-md focus:ring-green-500 focus:border-green-500" required>
+                                <input type="text" id="option2" placeholder="Wrong Answer 1" class="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required>
+                                <input type="text" id="option3" placeholder="Wrong Answer 2" class="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required>
+                                <input type="text" id="option4" placeholder="Wrong Answer 3" class="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" required>
+                            </div>
+                            <button type="submit" class="w-full bg-green-500 text-white p-2.5 rounded-md font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2">
+                                ${createIcon('plus-circle', 20)} Add Question
+                            </button>
+                        </form>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg mb-2 text-slate-900">Chapter Questions (${chapter.questions.length})</h3>
+                        <div id="questions-container" class="space-y-3"></div>
+                    </div>
+                    <div class="flex justify-end pt-4 border-t border-slate-200">
+                         <button id="save-chapter-btn" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition">Save and Close</button>
+                    </div>
+                </div>
+            `;
+            
+            renderChapterQuestions();
+
+            document.getElementById('add-question-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const questionText = document.getElementById('question-text').value.trim();
+                const options = [
+                    document.getElementById('option1').value.trim(), document.getElementById('option2').value.trim(),
+                    document.getElementById('option3').value.trim(), document.getElementById('option4').value.trim()
+                ];
+                if (questionText && options.every(opt => opt)) {
+                    chapter.questions.push({ question: questionText, options: shuffleArray([...options]), correctAnswer: options[0] });
+                    e.target.reset(); 
+                    document.getElementById('question-text').focus();
+                    renderChapterQuestions();
+                } else {
+                     showModal({
+                        title: "Incomplete Question",
+                        body: "Please fill in all fields (question and all four options) to add a question.",
+                        type: "alert"
+                    });
+                }
+            });
+            document.getElementById('save-chapter-btn').addEventListener('click', () => { 
+                saveDatabase(); 
+                navigate('chapters', { subjectId }); 
+            });
+        };
+        
+        // --- DEFAULT QUIZZES ---
+        const renderDefaultQuizzes = () => { 
+             const defaultQuizzes = [
+                {
+                    id: 'default_gk_1', name: 'General Knowledge 101', questions: [
+                        { question: 'What is the capital of France?', options: ['Berlin', 'Madrid', 'Paris', 'Rome'], correctAnswer: 'Paris' },
+                        { question: 'Which planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], correctAnswer: 'Mars' },
+                        { question: 'Who wrote "Romeo and Juliet"?', options: ['Charles Dickens', 'William Shakespeare', 'Mark Twain', 'Jane Austen'], correctAnswer: 'William Shakespeare' },
+                        { question: 'What is the largest ocean on Earth?', options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], correctAnswer: 'Pacific' },
+                        { question: 'In which year did the Titanic sink?', options: ['1912', '1905', '1898', '1920'], correctAnswer: '1912' }
+                    ]
+                }, {
+                    id: 'default_sci_1', name: 'Basic Science', questions: [
+                        { question: 'What is H2O?', options: ['Salt', 'Water', 'Oxygen', 'Hydrogen Peroxide'], correctAnswer: 'Water' },
+                        { question: 'What force pulls objects towards the Earth?', options: ['Magnetism', 'Friction', 'Gravity', 'Tension'], correctAnswer: 'Gravity' },
+                        { question: 'What is the chemical symbol for gold?', options: ['Ag', 'Au', 'G', 'Go'], correctAnswer: 'Au' },
+                        { question: 'Which gas do plants absorb from the atmosphere?', options: ['Oxygen', 'Nitrogen', 'Carbon Dioxide', 'Hydrogen'], correctAnswer: 'Carbon Dioxide' },
+                        { question: 'What is the powerhouse of the cell?', options: ['Nucleus', 'Ribosome', 'Mitochondria', 'Chloroplast'], correctAnswer: 'Mitochondria' }
+                    ]
+                }, {
+                    id: 'default_hist_1', name: 'World History Basics', questions: [
+                        { question: 'Who was the first emperor of Rome?', options: ['Julius Caesar', 'Nero', 'Augustus', 'Caligula'], correctAnswer: 'Augustus' },
+                        { question: 'When did World War II end?', options: ['1942', '1945', '1950', '1939'], correctAnswer: '1945' },
+                        { question: 'Which country built the Great Wall?', options: ['Japan', 'India', 'China', 'Korea'], correctAnswer: 'China' },
+                    ]
+                }
+            ];
+             mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <h2 class="text-2xl font-bold text-slate-900">Default Quizzes</h2>
+                    <p class="text-slate-600">These quizzes are pre-loaded and offer a quick way to test your general knowledge.</p>
+                    <div id="quiz-list" class="space-y-3"></div>
+                </div>
+            `;
+            const list = document.getElementById('quiz-list');
+             defaultQuizzes.forEach(quiz => {
+                const el = document.createElement('div');
+                el.className = 'bg-white p-4 rounded-lg shadow-md border border-slate-200 flex justify-between items-center';
+                el.innerHTML = `
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">${quiz.name}</h3>
+                        <p class="text-slate-500 text-sm">${quiz.questions.length} questions</p>
+                    </div>
+                    <button data-quiz-id="${quiz.id}" class="play-quiz-btn bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition flex items-center gap-1">
+                        ${createIcon('play', 18, 'inline-block')} Play
+                    </button>
+                `;
+                list.appendChild(el);
+            });
+            list.querySelectorAll('.play-quiz-btn').forEach(btn => btn.addEventListener('click', e => {
+                const quizToPlay = defaultQuizzes.find(q => q.id === e.currentTarget.dataset.quizId);
+                if (quizToPlay && quizToPlay.questions.length > 0) {
+                    startQuiz(quizToPlay.questions, 'default');
+                } else {
+                    showModal({ title: "Empty Quiz", body: "This default quiz has no questions.", type: "alert" });
+                }
+            }));
+        };
+
+        // --- TRENDING QUIZZES (Open Trivia Database Integration) ---
+        const renderTrendingQuizCategories = () => { 
+            const categories = [ 
+                { name: "General Knowledge", id: 9 }, { name: "Books", id: 10 }, { name: "Film", id: 11 }, { name: "Music", id: 12 }, 
+                { name: "Musicals & Theatres", id: 13 }, { name: "Television", id: 14 }, { name: "Video Games", id: 15 }, { name: "Board Games", id: 16 }, 
+                { name: "Science & Nature", id: 17 }, { name: "Computers", id: 18 }, { name: "Mathematics", id: 19 }, { name: "Mythology", id: 20 }, 
+                { name: "Sports", id: 21 }, { name: "Geography", id: 22 }, { name: "History", id: 23 }, { name: "Politics", id: 24 }, 
+                { name: "Art", id: 25 }, { name: "Celebrities", id: 26 }, { name: "Animals", id: 27 }, { name: "Vehicles", id: 28 }, 
+                { name: "Comics", id: 29 }, { name: "Gadgets", id: 30 }, { name: "Anime & Manga", id: 31 }, { name: "Cartoons & Animations", id: 32 }, 
+                { name: "Comedy", id:33 }, 
+            ];
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <h2 class="text-2xl font-bold text-slate-900">Trending Quizzes</h2>
+                    <p class="text-slate-600">Select a category to play a real-time quiz with 10 fresh questions from a public database (requires internet).</p>
+                    <div id="category-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+                </div>
+            `;
+            const grid = document.getElementById('category-grid');
+            categories.forEach(cat => {
+                const catCard = document.createElement('button');
+                catCard.className = 'p-4 bg-white border border-slate-200 rounded-lg text-center font-semibold text-slate-700 hover:bg-blue-500 hover:text-white transition-all transform hover:scale-105 shadow-sm';
+                catCard.textContent = cat.name;
+                catCard.addEventListener('click', () => fetchAndStartTrendingQuiz(cat.id, cat.name));
+                grid.appendChild(catCard);
+            });
+        };
+
+        const fetchAndStartTrendingQuiz = async (categoryId, categoryName) => { 
+            mainContent.innerHTML = createLoader(`Fetching fresh questions for ${categoryName}...`);
+            try {
+                // Open Trivia Database API
+                const response = await fetch(`https://opentdb.com/api.php?amount=10&category=${categoryId}&type=multiple`);
+                if (!response.ok) throw new Error(`API error: ${response.statusText} (Status: ${response.status})`);
+                const data = await response.json();
+
+                // response_code 0 means success
+                if (data.response_code !== 0) {
+                    let errorMessage = 'Could not fetch questions for this category.';
+                    if (data.response_code === 1) errorMessage = 'Not enough questions in this category. Please try a different category.';
+                    else if (data.response_code === 2) errorMessage = 'Invalid parameter in API request.'; // Should not happen with hardcoded categories
+                    throw new Error(errorMessage);
+                }
+                
+                const formattedQuestions = data.results.map(q => ({
+                    question: decodeHtml(q.question),
+                    options: shuffleArray([...q.incorrect_answers.map(decodeHtml), decodeHtml(q.correct_answer)]),
+                    correctAnswer: decodeHtml(q.correct_answer)
+                }));
+
+                if (formattedQuestions.length === 0) {
+                     throw new Error('No questions received from the API.');
+                }
+
+                startQuiz(formattedQuestions, 'trending');
+            } catch (error) {
+                console.error("Trending Quiz Fetch Error:", error);
+                showModal({ 
+                    title: "Fetch Error", 
+                    body: `Failed to fetch quiz questions: ${error.message || "Please check your internet connection and try again."}`, 
+                    type: "alert" 
+                });
+                renderTrendingQuizCategories(); // Go back to categories if error
+            }
+        };
+
+        // --- READ & SPEAK NOTES ---
+        const renderReadNotes = () => { 
+             mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-4">
+                    <h2 class="text-2xl font-bold text-slate-900">Read & Speak Your Notes</h2>
+                    <p class="text-slate-600">Select a note from the left (Table of Contents) to read its content. Use the "Speak" button to listen to your notes with text-to-speech.</p>
+                    <div id="read-speak-container" class="flex flex-col md:flex-row gap-4 max-h-[70vh] min-h-[50vh]">
+                        <!-- ToC will be here -->
+                        <div id="toc" class="w-full md:w-1/3 border border-slate-200 bg-white rounded-lg p-2 overflow-y-auto shadow-sm flex-shrink-0">
+                            <h3 class="font-bold p-2 text-slate-900 sticky top-0 bg-white z-10 border-b border-slate-200 -mx-2 mb-2">Table of Contents</h3>
+                            <div id="toc-list" class="space-y-1"></div>
+                        </div>
+                        <!-- Note Display & Speak Button -->
+                        <div class="w-full md:w-2/3 flex flex-col gap-4">
+                            <div id="note-display" class="prose max-w-none bg-slate-50 p-6 border border-slate-200 rounded-lg overflow-y-auto flex-grow shadow-sm">
+                                <p class="text-slate-500 italic text-center py-8">Select a note from the left to display its content here.</p>
+                            </div>
+                            <button id="speak-btn" class="bg-green-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-green-700 transition" disabled>
+                                ${createIcon('volume-2', 20)}<span id="speak-btn-text">Select a note to speak</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const tocList = document.getElementById('toc-list');
+            const noteDisplay = document.getElementById('note-display');
+            const speakBtn = document.getElementById('speak-btn');
+            const speakBtnText = document.getElementById('speak-btn-text');
+            
+            if (app.db.notes.length === 0) { 
+                tocList.innerHTML = `<p class="text-slate-500 text-center py-4">No notes to display. Create some notes!</p>`; 
+                speakBtn.disabled = true;
+                return; 
+            }
+
+            app.db.notes.forEach(note => {
+                const tocItem = document.createElement('button');
+                tocItem.className = 'w-full text-left p-2 rounded-md cursor-pointer hover:bg-blue-100 text-slate-700';
+                tocItem.textContent = note.topic;
+                tocItem.addEventListener('click', () => {
+                    // Reset previous active item
+                    tocList.querySelectorAll('.bg-blue-100').forEach(el => el.classList.remove('bg-blue-100', 'font-semibold'));
+                    tocItem.classList.add('bg-blue-100', 'font-semibold');
+                    
+                    // Render note content in prose style
+                    noteDisplay.innerHTML = `
+                        <article class="prose-document">
+                            <h2>${note.topic}</h2>
+                            ${note.content.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')}
+                        </article>
+                    `;
+                    speakBtn.disabled = false;
+                    speakBtnText.textContent = 'Speak this note';
+                    if (app.speech.isSpeaking) {
+                        app.speech.synth.cancel(); // Stop current speech if any
+                        app.speech.isSpeaking = false;
+                    }
+                });
+                tocList.appendChild(tocItem);
+            });
+
+            // Check if speech synthesis is available
+            if (!app.speech.synth) {
+                speakBtn.disabled = true;
+                speakBtnText.textContent = 'Speech not supported';
+                speakBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                showModal({
+                    title: "Speech Not Supported",
+                    body: "Your browser does not fully support text-to-speech. This feature may not work.",
+                    type: "alert"
+                });
+            }
+
+            speakBtn.addEventListener('click', () => {
+                if (app.speech.isSpeaking) {
+                    app.speech.synth.cancel();
+                } else {
+                    const textToSpeak = noteDisplay.innerText;
+                    if(textToSpeak.trim()) {
+                        app.speech.utterance = new SpeechSynthesisUtterance(textToSpeak);
+                        // You can customize voice, pitch, rate here if needed
+                        // app.speech.utterance.voice = app.speech.synth.getVoices().find(v => v.lang === 'en-US');
+                        // app.speech.utterance.pitch = 1; // 0 to 2
+                        // app.speech.utterance.rate = 1; // 0.1 to 10
+
+                        app.speech.utterance.onstart = () => { 
+                            app.speech.isSpeaking = true; 
+                            speakBtnText.textContent = 'Stop Speaking'; 
+                            speakBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                            speakBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                        };
+                        app.speech.utterance.onend = () => { 
+                            app.speech.isSpeaking = false; 
+                            speakBtnText.textContent = 'Speak this note'; 
+                            speakBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                            speakBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                        };
+                        app.speech.utterance.onerror = (event) => {
+                            console.error('Speech synthesis error:', event.error);
+                            app.speech.isSpeaking = false; 
+                            speakBtnText.textContent = 'Error Speaking'; 
+                            speakBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                            speakBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                            showModal({ title: "Speech Error", body: `An error occurred while speaking: ${event.error}`, type: "alert" });
+                        };
+                        app.speech.synth.speak(app.speech.utterance);
+                    }
+                }
+            });
+        };
+
+        // --- QUIZ ENGINE LOGIC ---
+        const startQuiz = (questions, type) => {
+            if (!questions || questions.length === 0) {
+                showModal({ title: "No Questions", body: "This quiz is empty and cannot be started.", type: "alert" });
+                return;
+            }
+            app.quizState = {
+                questions: shuffleArray([...questions]), // Ensure questions are shuffled for each quiz
+                currentQuestionIndex: 0, 
+                userAnswers: [], 
+                quizType: type, 
+                startTime: new Date()
+            };
+            navigate('quizPlayer');
+        };
+
+        const startComboQuiz = () => {
+            let comboQuestions = [];
+            // Add questions from custom quizzes
+            app.db.customQuizzes.forEach(quiz => comboQuestions.push(...quiz.questions));
+            // Add questions from all chapters within all subjects
+            app.db.subjects.forEach(subject => subject.chapters.forEach(chapter => comboQuestions.push(...chapter.questions)));
+            
+            if (comboQuestions.length === 0) {
+                showModal({ 
+                    title: "No Content For Combo Quiz", 
+                    body: "Please create some custom quizzes or add questions to subjects/chapters first to build a Combo Quiz.", 
+                    type: "alert" 
+                });
+                return;
+            }
+            startQuiz(comboQuestions, 'combo');
+        };
+
+        const renderQuizPlayer = () => {
+            const { questions, currentQuestionIndex } = app.quizState;
+            const question = questions[currentQuestionIndex];
+            
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-6">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                        <p class="text-sm font-semibold text-slate-600">Question ${currentQuestionIndex + 1} of ${questions.length}</p>
+                        <button id="exit-quiz-btn" class="text-sm text-red-500 hover:text-red-700 transition flex items-center gap-1">
+                            ${createIcon('home', 16, 'inline-block')} Exit Quiz
+                        </button>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: ${((currentQuestionIndex + 1) / questions.length) * 100}%"></div></div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <p class="text-xl font-semibold mb-6 text-center text-slate-900">${question.question}</p>
+                        <div id="options-container" class="space-y-3">
+                            ${question.options.map((opt) => `<button data-option="${opt}" class="quiz-option w-full text-left p-4 border-2 rounded-lg">${opt}</button>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            const optionsContainer = document.getElementById('options-container');
+            let answered = false; // Flag to prevent multiple clicks per question
+            
+            optionsContainer.querySelectorAll('.quiz-option').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (answered) return; // Ignore if already answered
+                    answered = true;
+
+                    const selectedOptionElement = e.currentTarget;
+                    const userAnswer = selectedOptionElement.dataset.option;
+                    app.quizState.userAnswers.push(userAnswer);
+
+                    // Visually mark selected option
+                    selectedOptionElement.classList.add('selected');
+                    // Disable all options to prevent further interaction
+                    optionsContainer.querySelectorAll('.quiz-option').forEach(otherBtn => otherBtn.disabled = true);
+                    
+                    // Provide feedback (correct/incorrect) after a short delay
+                    setTimeout(() => {
+                        if (userAnswer !== question.correctAnswer) {
+                            selectedOptionElement.classList.add('incorrect');
+                        }
+                        // Always highlight the correct answer
+                        optionsContainer.querySelector(`[data-option="${question.correctAnswer}"]`).classList.add('correct');
+                    }, 300); // Short delay to show user's selection first
+
+                    // Move to the next question or show results after feedback
+                    setTimeout(() => {
+                        if (app.quizState.currentQuestionIndex < app.quizState.questions.length - 1) {
+                            app.quizState.currentQuestionIndex++; 
+                            renderQuizPlayer(); // Render next question
+                        } else { 
+                            navigate('quizResults'); // Quiz finished
+                        }
+                    }, 1500); // Longer delay to allow user to see feedback
+                });
+            });
+
+            document.getElementById('exit-quiz-btn').addEventListener('click', () => {
+                showModal({ 
+                    title: "Exit Quiz", 
+                    body: "Are you sure you want to exit? Your current quiz progress will be lost.", 
+                    onConfirm: () => navigate('home') 
+                });
+            });
+        };
+
+        const renderQuizResults = () => {
+            const { questions, userAnswers, startTime, quizType } = app.quizState;
+            let score = 0;
+            const reviewQuestions = []; // To store questions with user's answer and correct answer
+
+            questions.forEach((q, i) => {
+                const isCorrect = q.correctAnswer === userAnswers[i];
+                reviewQuestions.push({ ...q, userAnswer: userAnswers[i], isCorrect });
+
+                if (isCorrect) {
+                    score++;
+                    // If it's a Nikesh quiz and answered correctly, remove from weak points
+                    if (quizType === 'nikesh') {
+                        // Filter out this specific question by comparing question text
+                        app.db.weakPoints = app.db.weakPoints.filter(wp => wp.question !== q.question);
+                    }
+                } else {
+                    // If it's NOT a Nikesh quiz and answered incorrectly, add to weak points
+                    // Ensure it's not already in weakPoints to avoid duplicates
+                    if (quizType !== 'nikesh' && !app.db.weakPoints.some(wp => wp.question === q.question)) {
+                         app.db.weakPoints.push(q);
+                    }
+                }
+            });
+            saveDatabase(); // Save updated weak points
+
+            const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+            const timeTaken = Math.round((new Date() - startTime) / 1000);
+
+            mainContent.innerHTML = `
+                <div class="animate-fadeIn space-y-6 text-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">Quiz Complete!</h2>
+                        <p class="text-lg text-slate-600 mt-2">Here are your results.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <div class="bg-blue-100 p-4 rounded-lg shadow-sm border border-blue-200">
+                            <p class="text-3xl font-bold text-blue-700">${score}/${questions.length}</p>
+                            <p class="text-sm text-slate-600">Score</p>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-lg shadow-sm border border-green-200">
+                            <p class="text-3xl font-bold text-green-700">${percentage}%</p>
+                            <p class="text-sm text-slate-600">Accuracy</p>
+                        </div>
+                        <div class="bg-yellow-100 p-4 rounded-lg shadow-sm border border-yellow-200">
+                            <p class="text-3xl font-bold text-yellow-700">${timeTaken}s</p>
+                            <p class="text-sm text-slate-600">Time Taken</p>
+                        </div>
+                    </div>
+                    <div class="text-left bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="text-xl font-bold text-slate-900 mb-4">Review Your Answers</h3>
+                        <div id="results-list" class="space-y-4 max-h-80 overflow-y-auto pr-2"></div>
+                    </div>
+                    <button id="finish-review-btn" class="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">Back to Home</button>
+                </div>
+            `;
+            const list = document.getElementById('results-list');
+            reviewQuestions.forEach((q, i) => {
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-lg border-l-4 ${q.isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`;
+                item.innerHTML = `
+                    <p class="font-semibold text-slate-800">${i + 1}. ${q.question}</p>
+                    <p class="text-sm mt-2 text-slate-700">Your answer: <span class="font-medium ${q.isCorrect ? 'text-green-700' : 'text-red-700'}">${q.userAnswer || 'Not answered'}</span></p>
+                    ${!q.isCorrect ? `<p class="text-sm text-slate-700">Correct answer: <span class="font-medium text-green-700">${q.correctAnswer}</span></p>` : ''}
+                `;
+                list.appendChild(item);
+            });
+            document.getElementById('finish-review-btn').addEventListener('click', () => navigate('home'));
+        };
+
+
+        // --- APP INITIALIZATION & GLOBAL EVENT LISTENERS ---
+        const init = () => {
+            loadDatabase();
+            navigate('home');
+            homeButton.addEventListener('click', () => navigate('home'));
+            
+            // Expose navigate globally for inline event handlers (e.g., onclick in HTML strings)
+            window.navigate = (view, params = {}) => {
+                 navigate(view, params);
+            };
+        };
+
+        init();
+    });
+    </script>
+
+</body>
+</html>
